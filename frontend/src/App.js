@@ -1,54 +1,123 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
-import { HOME } from "@/constants/testIds";
+import Lenis from "lenis";
+import { Toaster } from "sonner";
+import { toast } from "sonner";
+import Header from "@/components/Header";
+import Hero from "@/components/Hero";
+import Dashboard from "@/components/Dashboard";
+import Manifesto from "@/components/Manifesto";
+import MarqueeBar from "@/components/MarqueeBar";
+import Footer from "@/components/Footer";
+import { fetchWeather } from "@/lib/weather";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+const FAV_KEY = "mare_alta_favorites";
 
-const Home = () => {
-  const helloWorldApi = async () => {
+function App() {
+  const [location, setLocation] = useState({
+    id: "sp-santos",
+    name: "Santos",
+    region: "Litoral SP",
+    category: "praia",
+    lat: -23.9608,
+    lon: -46.3336,
+  });
+  const [weather, setWeather] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [favorites, setFavorites] = useState([]);
+  const dashRef = useRef(null);
+
+  // Lenis smooth scroll
+  useEffect(() => {
+    const lenis = new Lenis({ duration: 1.15, smoothWheel: true });
+    let raf;
+    const loop = (t) => {
+      lenis.raf(t);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    window.__lenis = lenis;
+    return () => {
+      cancelAnimationFrame(raf);
+      lenis.destroy();
+    };
+  }, []);
+
+  useEffect(() => {
     try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
+      const saved = JSON.parse(localStorage.getItem(FAV_KEY) || "[]");
+      setFavorites(saved);
+    } catch {
+      setFavorites([]);
+    }
+  }, []);
+
+  const loadWeather = useCallback(async (loc) => {
+    setLoading(true);
+    setError(null);
+    const isMarine = loc.category !== "rio" && loc.category !== "barragem";
+    try {
+      const data = await fetchWeather(loc.lat, loc.lon, isMarine);
+      setWeather(data);
     } catch (e) {
-      console.error(e, `errored out requesting / api`);
+      setError("Não foi possível carregar a previsão. Tente novamente.");
+      toast.error("Erro ao carregar previsão");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadWeather(location);
+  }, [location, loadWeather]);
+
+  const handleSelect = (loc) => {
+    setLocation(loc);
+    if (dashRef.current) {
+      window.__lenis?.scrollTo(dashRef.current, { offset: -80 });
     }
   };
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
+  const isFav = favorites.some((f) => f.id === location.id);
+  const toggleFav = () => {
+    let next;
+    if (isFav) {
+      next = favorites.filter((f) => f.id !== location.id);
+      toast("Local removido dos favoritos");
+    } else {
+      next = [...favorites, location];
+      toast.success("Local salvo nos favoritos");
+    }
+    setFavorites(next);
+    localStorage.setItem(FAV_KEY, JSON.stringify(next));
+  };
 
   return (
-    <div>
-      <header className="App-header">
-        <a
-          data-testid={HOME.emergentLink}
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
-
-function App() {
-  return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+    <div className="App min-h-screen bg-background text-foreground noise-overlay">
+      <Toaster position="top-center" richColors />
+      <Header
+        onSelect={handleSelect}
+        favorites={favorites}
+        current={location}
+        isFav={isFav}
+        onToggleFav={toggleFav}
+      />
+      <main>
+        <Hero location={location} weather={weather} onExplore={() => window.__lenis?.scrollTo(dashRef.current, { offset: -80 })} />
+        <MarqueeBar />
+        <div ref={dashRef}>
+          <Dashboard
+            location={location}
+            weather={weather}
+            loading={loading}
+            error={error}
+            onRetry={() => loadWeather(location)}
+          />
+        </div>
+        <Manifesto />
+      </main>
+      <Footer />
     </div>
   );
 }
