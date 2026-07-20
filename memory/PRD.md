@@ -18,7 +18,8 @@ precisa de uma landing page de previsão do tempo com dados equivalentes ao Naut
 ## Implementado (2025-12)
 - Landing kinética + dashboard funcional com dados reais (vento km/h, pressão+tendência, ondas/swell/temp água, marés estimadas, solunar, fase da lua, previsão horária + 7 dias, mapa Windy embutido).
 - Favoritos em localStorage. Busca por geocoding. 12 locais pré-configurados.
-- Testes: backend 12/12 pytest OK, frontend E2E 100% OK (iteration_1.json).
+- **Seletor de período (Início/Fim, dd/mm/aa)**: presets (Hoje/7/14 dias) + calendário de intervalo (shadcn). Backend usa start_date/end_date do Open-Meteo (clamp: -92d a +15d). Card de dias vira "Período · N dias". Guard de request-id evita respostas fora de ordem.
+- Testes: backend 17/17 pytest OK, frontend E2E 100% OK (iteration_1 e iteration_2).
 
 ## Notas
 - Marés e solunar são ESTIMATIVAS astronômicas (rotuladas na UI). Dados marítimos só em pontos costeiros/oceânicos.

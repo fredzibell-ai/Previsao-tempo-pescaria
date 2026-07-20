@@ -250,7 +250,7 @@ async def weather(
             if sd > ed:
                 sd, ed = ed, sd
             lo = today - timedelta(days=92)
-            hi = today + timedelta(days=16)
+            hi = today + timedelta(days=15)
             sd = min(max(sd, lo), hi)
             ed = min(max(ed, lo), hi)
             s, e = sd.isoformat(), ed.isoformat()

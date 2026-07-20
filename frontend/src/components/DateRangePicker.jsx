@@ -14,7 +14,7 @@ export default function DateRangePicker({ range, onApply }) {
 
   const today = startOfDay(new Date());
   const minDate = new Date(today); minDate.setDate(minDate.getDate() - 90);
-  const maxDate = new Date(today); maxDate.setDate(maxDate.getDate() + 16);
+  const maxDate = new Date(today); maxDate.setDate(maxDate.getDate() + 15);
 
   useEffect(() => {
     const handler = (e) => {
