@@ -253,7 +253,7 @@ def fishing_scores(daily, hourly):
     return {"days": results, "best_index": best_index}
 
 
-def daily_details(daily, marine_hourly, tz_offset_hours):
+def daily_details(daily, marine_hourly, tz_offset_hours, marine_point=True):
     """Per-day breakdown of marine (waves), solunar windows and tide estimates."""
     times = (daily or {}).get("time") or []
     if not times:
@@ -301,11 +301,18 @@ def daily_details(daily, marine_hourly, tz_offset_hours):
                 "swell_wave_height": mean(b["sw"]),
                 "sea_surface_temperature": mean(b["sst"]),
             }
+        if marine is not None:
+            marine_status = "ok"
+        elif not marine_point:
+            marine_status = "river"
+        else:
+            marine_status = "beyond_horizon"
 
         tides = estimate_tides(day_dt, tz_offset_hours)
         out.append({
             "date": day,
             "marine": marine,
+            "marine_status": marine_status,
             "solunar": {"major": majors, "minor": minors, "rating": rating,
                         "moon": {"phase_name": mp["phase_name"], "illumination": illum}},
             "tides": tides,
@@ -461,7 +468,7 @@ async def weather(
     result["solunar"] = solunar_periods(now, tz_offset, sunrise, sunset)
     result["tides"] = estimate_tides(now, tz_offset)
     result["fishing"] = fishing_scores(result.get("daily", {}), result.get("hourly", {}))
-    result["daily_details"] = daily_details(result.get("daily", {}), result.get("marine_hourly", {}), tz_offset)
+    result["daily_details"] = daily_details(result.get("daily", {}), result.get("marine_hourly", {}), tz_offset, marine_point=bool(result.get("marine_available")))
     result["period"] = period
     return result
 

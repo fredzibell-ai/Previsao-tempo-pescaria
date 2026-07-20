@@ -2,15 +2,18 @@ import { motion } from "framer-motion";
 import { Waves, Fish, Moon, ArrowUpRight, ArrowDownRight, Clock } from "lucide-react";
 import { degToCompass, fmtDay } from "@/lib/weather";
 
-function OceanBlock({ marine }) {
+function OceanBlock({ marine, status }) {
   if (!marine) {
+    const msg = status === "beyond_horizon"
+      ? "Fora do horizonte marítimo (~7 dias à frente)."
+      : "Sem dados marítimos (rio / interior).";
     return (
       <div className="p-5">
         <div className="flex items-center justify-between">
           <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Ondas &amp; Mar</p>
           <Waves className="h-4 w-4 text-primary" />
         </div>
-        <p className="mt-6 font-mono text-sm text-muted-foreground">Sem dados marítimos (rio / interior).</p>
+        <p className="mt-6 font-mono text-sm text-muted-foreground">{msg}</p>
       </div>
     );
   }
@@ -115,7 +118,7 @@ export default function DailyDetails({ details, period }) {
               </span>
             </div>
             <div className="grid grid-cols-1 divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
-              <OceanBlock marine={d.marine} />
+              <OceanBlock marine={d.marine} status={d.marine_status} />
               <SolunarBlock solunar={d.solunar} />
               <TideBlock tides={d.tides} />
             </div>
