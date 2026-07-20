@@ -118,6 +118,88 @@ class TestWeatherRiver:
         assert "tides" in d and len(d["tides"]["events"]) >= 3
 
 
+# ----------------------- Weather Date Range (NEW) -----------------------
+class TestWeatherDateRange:
+    def test_weather_with_range_14_days(self, client):
+        # Use dates that are within Open-Meteo's allowed window (~today .. today+16)
+        from datetime import date, timedelta
+        today = date.today()
+        s = today.isoformat()
+        e = (today + timedelta(days=13)).isoformat()
+        r = client.get(
+            f"{API}/weather",
+            params={"lat": -23.96, "lon": -46.33, "marine": "true", "start_date": s, "end_date": e},
+        )
+        assert r.status_code == 200, r.text
+        d = r.json()
+        assert "period" in d and d["period"] is not None
+        p = d["period"]
+        assert p["start"] == s
+        assert p["end"] == e
+        assert p["days"] == 14
+        # daily.time should have 14 entries
+        assert len(d["daily"]["time"]) == 14
+        assert d["daily"]["time"][0] == s
+        assert d["daily"]["time"][-1] == e
+
+    def test_weather_only_start_date_ignored(self, client):
+        # With only start_date, period should be null and default 7-day forecast returned
+        r = client.get(
+            f"{API}/weather",
+            params={"lat": -23.96, "lon": -46.33, "marine": "true", "start_date": "2026-07-20"},
+        )
+        assert r.status_code == 200
+        d = r.json()
+        assert d.get("period") is None
+        assert len(d["daily"]["time"]) == 7
+
+    def test_weather_start_after_end_swapped(self, client):
+        from datetime import date, timedelta
+        today = date.today()
+        # start intentionally after end
+        s = (today + timedelta(days=5)).isoformat()
+        e = today.isoformat()
+        r = client.get(
+            f"{API}/weather",
+            params={"lat": -23.96, "lon": -46.33, "marine": "true", "start_date": s, "end_date": e},
+        )
+        assert r.status_code == 200
+        d = r.json()
+        p = d["period"]
+        assert p["start"] == today.isoformat()
+        assert p["end"] == (today + timedelta(days=5)).isoformat()
+        assert p["days"] == 6
+        assert len(d["daily"]["time"]) == 6
+
+    def test_weather_far_future_end_clamped(self, client):
+        # end far in future should be clamped, not 500
+        from datetime import date, timedelta
+        today = date.today()
+        s = today.isoformat()
+        e_far = "2027-01-01"
+        r = client.get(
+            f"{API}/weather",
+            params={"lat": -23.96, "lon": -46.33, "marine": "true", "start_date": s, "end_date": e_far},
+        )
+        assert r.status_code == 200, r.text
+        d = r.json()
+        p = d["period"]
+        # end should have been clamped to today+16 (or earlier)
+        max_end = (today + timedelta(days=16)).isoformat()
+        assert p["end"] <= max_end
+        # daily.time count should equal (end - start).days + 1
+        assert len(d["daily"]["time"]) == p["days"]
+        # Should be at least a couple weeks
+        assert p["days"] >= 15
+
+    def test_weather_invalid_date_400(self, client):
+        r = client.get(
+            f"{API}/weather",
+            params={"lat": -23.96, "lon": -46.33, "start_date": "20-07-2026", "end_date": "2026-08-02"},
+        )
+        assert r.status_code == 400
+
+
 # ----------------------- Favorites CRUD -----------------------
 class TestFavorites:
     fav_id = "TEST_fav_santos_zzz"

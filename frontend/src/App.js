@@ -10,8 +10,15 @@ import Manifesto from "@/components/Manifesto";
 import MarqueeBar from "@/components/MarqueeBar";
 import Footer from "@/components/Footer";
 import { fetchWeather } from "@/lib/weather";
+import { format } from "date-fns";
 
 const FAV_KEY = "mare_alta_favorites";
+const iso = (d) => format(d, "yyyy-MM-dd");
+const initialRange = () => {
+  const from = new Date(); from.setHours(0, 0, 0, 0);
+  const to = new Date(from); to.setDate(to.getDate() + 6);
+  return { from, to };
+};
 
 function App() {
   const [location, setLocation] = useState({
@@ -26,7 +33,9 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [favorites, setFavorites] = useState([]);
+  const [range, setRange] = useState(initialRange);
   const dashRef = useRef(null);
+  const reqIdRef = useRef(0);
 
   // Lenis smooth scroll
   useEffect(() => {
@@ -53,24 +62,29 @@ function App() {
     }
   }, []);
 
-  const loadWeather = useCallback(async (loc) => {
+  const loadWeather = useCallback(async (loc, rng) => {
+    const myReq = ++reqIdRef.current;
     setLoading(true);
     setError(null);
     const isMarine = loc.category !== "rio" && loc.category !== "barragem";
+    const startD = rng?.from ? iso(rng.from) : null;
+    const endD = rng?.to ? iso(rng.to) : null;
     try {
-      const data = await fetchWeather(loc.lat, loc.lon, isMarine);
-      setWeather(data);
+      const data = await fetchWeather(loc.lat, loc.lon, isMarine, startD, endD);
+      if (myReq === reqIdRef.current) setWeather(data);
     } catch (e) {
-      setError("Não foi possível carregar a previsão. Tente novamente.");
-      toast.error("Erro ao carregar previsão");
+      if (myReq === reqIdRef.current) {
+        setError("Não foi possível carregar a previsão. Tente novamente.");
+        toast.error("Erro ao carregar previsão");
+      }
     } finally {
-      setLoading(false);
+      if (myReq === reqIdRef.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadWeather(location);
-  }, [location, loadWeather]);
+    loadWeather(location, range);
+  }, [location, range, loadWeather]);
 
   const handleSelect = (loc) => {
     setLocation(loc);
@@ -112,7 +126,9 @@ function App() {
             weather={weather}
             loading={loading}
             error={error}
-            onRetry={() => loadWeather(location)}
+            range={range}
+            onRangeChange={setRange}
+            onRetry={() => loadWeather(location, range)}
           />
         </div>
         <Manifesto />

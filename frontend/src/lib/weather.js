@@ -6,8 +6,14 @@ export const API = `${BACKEND_URL}/api`;
 export const api = axios.create({ baseURL: API, timeout: 30000 });
 
 export const fetchPresets = () => api.get("/presets").then((r) => r.data.spots);
-export const fetchWeather = (lat, lon, marine = true) =>
-  api.get("/weather", { params: { lat, lon, marine } }).then((r) => r.data);
+export const fetchWeather = (lat, lon, marine = true, startDate = null, endDate = null) => {
+  const params = { lat, lon, marine };
+  if (startDate && endDate) {
+    params.start_date = startDate;
+    params.end_date = endDate;
+  }
+  return api.get("/weather", { params }).then((r) => r.data);
+};
 export const geocode = (q) => api.get("/geocode", { params: { q } }).then((r) => r.data.results);
 
 // --- Formatting helpers ---

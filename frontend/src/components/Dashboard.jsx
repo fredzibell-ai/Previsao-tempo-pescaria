@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { MapPin, Loader2, RefreshCw, Layers } from "lucide-react";
+import DateRangePicker from "@/components/DateRangePicker";
 import {
   WindCard, PressureCard, ConditionCard, WaveCard, TideCard,
   SolunarCard, MoonCard, HourlyStrip, DailyCard, Card,
@@ -27,7 +28,7 @@ function WindyMap({ lat, lon }) {
   );
 }
 
-export default function Dashboard({ location, weather, loading, error, onRetry }) {
+export default function Dashboard({ location, weather, loading, error, range, onRangeChange, onRetry }) {
   return (
     <section data-testid="dashboard-section" className="border-t border-border bg-background py-14 md:py-20">
       <div className="mx-auto max-w-[1400px] px-4 md:px-8">
@@ -39,13 +40,16 @@ export default function Dashboard({ location, weather, loading, error, onRetry }
             </h2>
             {location?.region && <p className="mt-1 font-mono text-sm text-muted-foreground">{location.region}</p>}
           </div>
-          <button
-            data-testid="refresh-btn"
-            onClick={onRetry}
-            className="flex items-center gap-2 border border-border bg-white px-4 py-2 font-mono text-xs uppercase tracking-widest transition-colors hover:bg-primary hover:text-primary-foreground"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Atualizar
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <DateRangePicker range={range} onApply={onRangeChange} />
+            <button
+              data-testid="refresh-btn"
+              onClick={onRetry}
+              className="flex items-center gap-2 border border-border bg-white px-4 py-2 font-mono text-xs uppercase tracking-widest transition-colors hover:bg-primary hover:text-primary-foreground"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Atualizar
+            </button>
+          </div>
         </div>
 
         {loading && !weather && (
@@ -77,7 +81,7 @@ export default function Dashboard({ location, weather, loading, error, onRetry }
             <SolunarCard solunar={weather.solunar} />
             <TideCard tides={weather.tides} />
             <HourlyStrip hourly={weather.hourly} />
-            <DailyCard daily={weather.daily} />
+            <DailyCard daily={weather.daily} period={weather.period} />
           </motion.div>
         )}
       </div>

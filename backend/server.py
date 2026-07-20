@@ -9,7 +9,7 @@ import asyncio
 from pathlib import Path
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, date
 import httpx
 
 ROOT_DIR = Path(__file__).parent
@@ -200,8 +200,11 @@ async def weather(
     lat: float = Query(...),
     lon: float = Query(...),
     marine: bool = Query(True),
+    start_date: Optional[str] = Query(None, description="YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="YYYY-MM-DD"),
 ):
-    """Aggregate weather + marine + astronomy for a coordinate."""
+    """Aggregate weather + marine + astronomy for a coordinate.
+    Optional start_date/end_date (YYYY-MM-DD) select a custom period."""
     forecast_params = {
         "latitude": lat,
         "longitude": lon,
@@ -236,6 +239,31 @@ async def weather(
         "timezone": "auto",
         "forecast_days": 3,
     }
+
+    # Optional custom date range (clamped to Open-Meteo limits: ~92d past .. 16d future)
+    period = None
+    if start_date and end_date:
+        try:
+            today = date.today()
+            sd = datetime.strptime(start_date, "%Y-%m-%d").date()
+            ed = datetime.strptime(end_date, "%Y-%m-%d").date()
+            if sd > ed:
+                sd, ed = ed, sd
+            lo = today - timedelta(days=92)
+            hi = today + timedelta(days=16)
+            sd = min(max(sd, lo), hi)
+            ed = min(max(ed, lo), hi)
+            s, e = sd.isoformat(), ed.isoformat()
+            forecast_params.pop("forecast_days", None)
+            forecast_params["start_date"] = s
+            forecast_params["end_date"] = e
+            marine_params.pop("forecast_days", None)
+            marine_params["start_date"] = s
+            marine_params["end_date"] = e
+            period = {"start": s, "end": e, "days": (ed - sd).days + 1}
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Datas inválidas (use YYYY-MM-DD)")
+
     try:
         async with httpx.AsyncClient(timeout=15) as c:
             tasks = [c.get(OPEN_METEO_FORECAST, params=forecast_params)]
@@ -276,6 +304,7 @@ async def weather(
     sunset = daily.get("sunset", [None])[0] if daily.get("sunset") else None
     result["solunar"] = solunar_periods(now, tz_offset, sunrise, sunset)
     result["tides"] = estimate_tides(now, tz_offset)
+    result["period"] = period
     return result
 
 

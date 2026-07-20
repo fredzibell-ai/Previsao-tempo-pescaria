@@ -1,0 +1,43 @@
+{
+  "summary": "Regression + NEW date-range feature testing. Backend: 16/17 pytest tests pass. Frontend: date-range picker fully functional (trigger, popover, presets Hoje/7d/14d, 2-month calendar, Aplicar button, custom range applies and refetches). Regressions all pass (search, Windy iframe, favorites star + localStorage persistence after reload, dashboard cards). ONE backend bug found: end_date clamp of today+16 causes Open-Meteo to return 400 → server returns 502. Should clamp to today+15.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/weather?start_date=X&end_date=<far-future>", "issue": "Server clamps end_date to today+16 (server.py line 253 uses timedelta(days=16)), but Open-Meteo /v1/forecast only accepts up to today+15 (max 16 forecast_days including today). Result: request end_date=2027-01-01 gets clamped to 2026-08-05 (today=2026-07-20), Open-Meteo returns 400 Bad Request, server returns 502 'Erro ao buscar previsão do tempo'. FIX: change hi = today + timedelta(days=15) OR reduce by one day. Verified: end_date=today+15 (2026-08-04) returns 200 with 16-day forecast; end_date=today+16 (2026-08-05) returns 400.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "GET /api/weather (marine=false)", "issue": "marine_available returned as null instead of false (carried over from iteration_1; not functional issue since JS falsy)"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Header when title reveals through", "issues": ["When the daterange popover opens, header/hero text underneath can be partially masked by an unstyled area; not an actual overlap but z-index of popover (z-60) works. Cosmetic only."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_mare_alta_backend.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "server.py line 253: change `hi = today + timedelta(days=16)` to `hi = today + timedelta(days=15)` (Open-Meteo forecast API supports max 16 forecast_days total meaning today..today+15). This fixes the 502 when user requests far-future ranges.",
+    "Optional: catch 400 from Open-Meteo separately and return a friendly 400 (with 'período fora da janela permitida') instead of a generic 502."
+  ],
+  "critical_code_review_comments": [
+    "server.py clamp bug: Open-Meteo /v1/forecast rejects end_date > today+15; server currently clamps to today+16 causing 502 on far-future end_date. Confirmed with curl.",
+    "server.py: after clamp, the (ed - sd).days + 1 may still exceed 16 if user picks past 92 days + future 15 days -> ~108 days. Open-Meteo does allow this because it supports past + forecast in the same range; however if start_date is within valid past window and end_date within future window, the range is fine. No fix needed here.",
+    "App.js iso() uses local date; on days near timezone rollovers this could send yesterday/today. Minor.",
+    "DateRangePicker: applyPreset ignores the maxDate=today+16; presets max=14 days so within window, but if a preset-16d were added it'd hit the same 502.",
+    "iteration_1 comments still valid (logger definition order; search results category='busca' triggers marine=true for inland searches; no pagination on favorites)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mare_alta_backend.py (added TestWeatherDateRange class with 5 new tests)"
+  ],
+  "success_rate": {"backend": "94% (16/17)", "frontend": "100%"},
+  "test_credentials": "None required - no auth",
+  "seed_data_creation": "Created and cleaned up TEST_fav_santos_zzz favorite (backend). Created & cleaned mare_alta_favorites localStorage entry during frontend test.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend pytest file at /app/backend/tests/test_mare_alta_backend.py now has 17 tests including 5 date-range tests. Currently test_weather_far_future_end_clamped fails because server clamps to today+16 but Open-Meteo only accepts today+15. Fix in server.py line 253 (timedelta(days=16) -> 15). Frontend uses Lenis smooth scroll: use element.click() via page.evaluate to avoid mis-clicks on Windy iframe. All frontend date-range tests passed: preset-today (1 row / 'PERÍODO · 1 DIA'), preset-7d (7 rows), preset-14d (14 rows / 'PERÍODO · 14 DIAS'). Trigger text format is 'dd/MM/yy\\ndd/MM/yy'. Header Início/Fim labels are UPPERCASED via CSS (uppercase them or use case-insensitive check).",
+  "rca of the issue": "Root cause of 502 on far-future end_date: Open-Meteo /v1/forecast endpoint returns 400 Bad Request when the requested date range extends beyond ~16 forecast days from today. The API's max forecast horizon is today+15 (16 days total including today). Server currently uses timedelta(days=16) which allows end_date to be today+16 = 17 days total, triggering Open-Meteo's 400. Reproduction: GET /api/weather?lat=-23.96&lon=-46.33&start_date=<today>&end_date=<today+16>. Mitigation: reduce clamp to timedelta(days=15). Verified 15-day boundary works via direct curl."
+}

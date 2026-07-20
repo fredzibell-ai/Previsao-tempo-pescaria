@@ -251,11 +251,14 @@ export function HourlyStrip({ hourly }) {
   );
 }
 
-export function DailyCard({ daily }) {
+export function DailyCard({ daily, period }) {
   if (!daily?.time) return null;
+  const title = period
+    ? `Período · ${period.days} dia${period.days > 1 ? "s" : ""}`
+    : "Próximos 7 dias";
   return (
     <Card testId="daily-card" span="md:col-span-4 lg:col-span-8">
-      <div className="flex items-center justify-between"><Label>Próximos 7 dias</Label><Sun className="h-4 w-4 text-primary" /></div>
+      <div className="flex items-center justify-between"><Label>{title}</Label><Sun className="h-4 w-4 text-primary" /></div>
       <div className="mt-4 divide-y divide-border">
         {daily.time.map((d, i) => {
           const [label, icon] = weatherCodeMap(daily.weather_code[i]);
