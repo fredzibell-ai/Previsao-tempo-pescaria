@@ -3,6 +3,8 @@ import { Search, Star, MapPin, ChevronDown, X, Loader2 } from "lucide-react";
 import { geocode, fetchPresets } from "@/lib/weather";
 
 const PRESET_GROUPS = [
+  { key: "rs", label: "Rio Grande do Sul", regions: ["Rio Grande do Sul"] },
+  { key: "sc", label: "Santa Catarina", regions: ["Santa Catarina"] },
   { key: "mar", label: "Mar Aberto / Litoral SP", regions: ["Litoral SP"] },
   { key: "amazonia", label: "Bacia Amazônica", regions: ["Bacia Amazônica"] },
   { key: "mt", label: "Mato Grosso", regions: ["Mato Grosso"] },

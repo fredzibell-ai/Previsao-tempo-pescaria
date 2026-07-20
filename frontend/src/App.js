@@ -22,12 +22,12 @@ const initialRange = () => {
 
 function App() {
   const [location, setLocation] = useState({
-    id: "sp-santos",
-    name: "Santos",
-    region: "Litoral SP",
+    id: "rs-balneario-mostardense",
+    name: "Balneário Mostardense",
+    region: "Rio Grande do Sul",
     category: "praia",
-    lat: -23.9608,
-    lon: -46.3336,
+    lat: -31.2394,
+    lon: -50.9053,
   });
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(false);

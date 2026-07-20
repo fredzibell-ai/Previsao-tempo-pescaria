@@ -49,6 +49,12 @@ PRESET_SPOTS = [
     # Barragens SP
     {"id": "sp-jurumirim", "name": "Represa de Jurumirim", "region": "Barragens SP", "category": "barragem", "lat": -23.2181, "lon": -49.2181},
     {"id": "sp-billings", "name": "Represa Billings", "region": "Barragens SP", "category": "barragem", "lat": -23.7800, "lon": -46.5500},
+    # Santa Catarina
+    {"id": "sc-barra-do-sul", "name": "Barra do Sul", "region": "Santa Catarina", "category": "praia", "lat": -26.4569, "lon": -48.6119},
+    {"id": "sc-picarras", "name": "Balneário Piçarras", "region": "Santa Catarina", "category": "praia", "lat": -26.7656, "lon": -48.6714},
+    {"id": "sc-florianopolis", "name": "Florianópolis", "region": "Santa Catarina", "category": "mar-aberto", "lat": -27.5969, "lon": -48.5495},
+    # Rio Grande do Sul
+    {"id": "rs-balneario-mostardense", "name": "Balneário Mostardense", "region": "Rio Grande do Sul", "category": "praia", "lat": -31.2394, "lon": -50.9053},
 ]
 
 
