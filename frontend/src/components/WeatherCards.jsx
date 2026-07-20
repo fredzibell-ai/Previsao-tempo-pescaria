@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import {
   Wind, Gauge, ArrowUp, ArrowDown, Minus, Waves, Thermometer, Droplets,
   Sun, Cloud, CloudSun, CloudRain, CloudRainWind, CloudDrizzle, CloudSnow,
-  CloudFog, CloudLightning, Moon, Fish, ArrowUpRight, ArrowDownRight,
+  CloudFog, CloudLightning, Moon, Fish, ArrowUpRight, ArrowDownRight, Trophy, Sparkles,
 } from "lucide-react";
 import { degToCompass, weatherCodeMap, fmtDay, fmtHour, pressureTrend, currentHourIndex } from "@/lib/weather";
 
@@ -273,6 +273,62 @@ export function DailyCard({ daily, period }) {
             </div>
           );
         })}
+      </div>
+    </Card>
+  );
+}
+
+
+const ratingColor = (r) =>
+  r === "Excelente" ? "text-primary" : r === "Boa" ? "text-foreground" : r === "Moderada" ? "text-muted-foreground" : "text-accent";
+
+export function BestDayCard({ fishing }) {
+  if (!fishing?.days?.length || fishing.best_index == null) return null;
+  const best = fishing.days[fishing.best_index];
+  const days = fishing.days;
+  return (
+    <Card testId="best-day-card" span="md:col-span-4 lg:col-span-8" className="!p-0 overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-5">
+        {/* Highlight best day */}
+        <div className="border-b border-border bg-foreground p-6 text-background lg:col-span-2 lg:border-b-0 lg:border-r">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-accent" />
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-background/70">Melhor dia para pescar</p>
+          </div>
+          <p className="mt-4 font-serif text-4xl italic leading-none md:text-5xl" data-testid="best-day-date">{fmtDay(best.date)}</p>
+          <div className="mt-4 flex items-end gap-3">
+            <span className="font-mono text-6xl leading-none tracking-tight text-accent" data-testid="best-day-score">{best.score}</span>
+            <span className="mb-1 font-mono text-xs uppercase tracking-widest text-background/70">/ 100 · {best.rating}</span>
+          </div>
+          <div className="mt-5 flex flex-wrap gap-2">
+            {best.reasons.map((r, i) => (
+              <span key={i} className="flex items-center gap-1 border border-background/30 px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-background/90">
+                <Sparkles className="h-3 w-3 text-accent" /> {r}
+              </span>
+            ))}
+          </div>
+        </div>
+        {/* Ranked list */}
+        <div className="p-5 lg:col-span-3 md:p-6">
+          <div className="flex items-center justify-between"><Label>Ranking de pesca do período</Label><Fish className="h-4 w-4 text-primary" /></div>
+          <div className="mt-4 space-y-2.5">
+            {days.map((d, i) => (
+              <div key={d.date} className="flex items-center gap-3" data-testid={`fishing-day-${i}`}>
+                <span className="w-24 shrink-0 font-mono text-xs text-foreground">{fmtDay(d.date)}</span>
+                <div className="relative h-4 flex-1 border border-border bg-muted">
+                  <div
+                    className={`h-full ${i === fishing.best_index ? "bg-accent" : "bg-primary"}`}
+                    style={{ width: `${d.score}%` }}
+                  />
+                </div>
+                <span className={`w-10 shrink-0 text-right font-mono text-sm ${ratingColor(d.rating)}`}>{d.score}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 font-mono text-[11px] text-muted-foreground">
+            Pontuação combina vento fraco, pressão em queda, fase da lua e baixa chuva.
+          </p>
+        </div>
       </div>
     </Card>
   );

@@ -1,0 +1,37 @@
+{
+  "summary": "Full backend + frontend validation of the new 'Melhor dia para pescar' (BestDayCard) feature plus regression. Backend: 20/20 pytest tests pass (added 3 new TestFishing tests: marine 7d, river 7d, custom 14d). Fishing object shape is correct: days array length equals daily.time length, best_index points to max score, each day has date/score(0-100)/rating in {Excelente,Boa,Moderada,Fraca}/reasons/wind/pressure_trend/precip_prob/moon_illum. Frontend: best-day-card renders on dark panel (bg-foreground) with best-day-date + best-day-score, all fishing-day-{i} rows render with bars, best row uses bg-accent color, changing to preset-14d updates ranking to 14 rows and recomputes best day. Prior iteration_2 bug (server clamp to today+16) has been FIXED (server.py now uses timedelta(days=15)) and the far-future clamp test now passes.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/weather (marine=false)", "issue": "marine_available returned as null/undefined instead of explicit false (carried over from iteration_1; not a functional issue since JS falsy check handles it in WaveCard)"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_mare_alta_backend.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py fishing_scores: silent default of wind=20 when wind_max[i] is None can bias score upward on missing data; consider skipping the day or lowering default.",
+    "server.py fishing_scores: pressure_trend uses last-hour minus first-hour of the day. For future days Open-Meteo returns full 24h; for the current day it's from midnight to last available hour. Trend interpretation is consistent but weakly meaningful for very partial days.",
+    "server.py: hourly.surface_pressure is used for pressure_trend but /api/weather also returns pressure_msl in current only, not hourly, so no MSL trend option. Minor.",
+    "server.py: fishing.days always uses whatever daily.time length is (7 default or period days) — correct and matches spec.",
+    "WeatherCards.jsx BestDayCard: 'best.reasons.map((r,i))' uses index as key which is fine here since reasons are stable per render. Non-issue.",
+    "WeatherCards.jsx: file is 335 lines, still within acceptable range but growing; could split BestDayCard/DailyCard/HourlyStrip into separate files if it goes >500."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mare_alta_backend.py (added TestFishing class with 3 tests + _assert_fishing_shape helper)"
+  ],
+  "success_rate": {"backend": "100% (20/20)", "frontend": "100%"},
+  "test_credentials": "None required - no auth",
+  "seed_data_creation": "TEST_fav_santos_zzz favorite created & cleaned up during favorites CRUD tests (idempotent)",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "20 backend pytest tests in /app/backend/tests/test_mare_alta_backend.py (TestHealth, TestPresets, TestGeocode, TestWeatherMarine, TestWeatherRiver, TestWeatherDateRange x5, TestFishing x3, TestFavorites x4). All pass on 2026-07-20. Frontend BestDayCard verified with default 7-day (best 'Dom 26/07' score 88) and 14-day preset (best 'Ter 28/07' score 90, 14 fishing-day-{i} rows). React StrictMode double-mounts so wait 3-4s after selector appears before reading text. Lenis smooth scroll is active — use element.evaluate('el => el.click()') for clicks. iteration_2 clamp bug (today+16 -> Open-Meteo 400 -> 502) is FIXED in server.py. iteration_1 minor observation about marine_available=null (vs false) for marine=false still present but non-functional.",
+  "rca of the issue": "No new bugs. The fishing feature is correctly implemented on both backend (fishing_scores in server.py) and frontend (BestDayCard in WeatherCards.jsx, rendered by Dashboard.jsx). Score weights (wind 0.35, pressure 0.30, moon 0.20, rain 0.15) sum to 1.0. Rating thresholds (>=75 Excelente, >=60 Boa, >=45 Moderada, else Fraca) applied correctly. Best index selection uses max(score). Frontend correctly styles the best row's bar with bg-accent and others with bg-primary."
+}

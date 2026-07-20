@@ -200,6 +200,64 @@ class TestWeatherDateRange:
         assert r.status_code == 400
 
 
+# ----------------------- Fishing scores (NEW) -----------------------
+VALID_RATINGS = {"Excelente", "Boa", "Moderada", "Fraca"}
+
+
+def _assert_fishing_shape(fishing, expected_days):
+    assert fishing is not None, "fishing missing"
+    assert "days" in fishing and "best_index" in fishing
+    days = fishing["days"]
+    assert isinstance(days, list)
+    assert len(days) == expected_days
+    for d in days:
+        for k in ("date", "score", "rating", "reasons", "wind", "pressure_trend", "precip_prob", "moon_illum"):
+            assert k in d, f"fishing.day missing key {k}"
+        assert 0 <= d["score"] <= 100
+        assert d["rating"] in VALID_RATINGS
+        assert isinstance(d["reasons"], list) and len(d["reasons"]) >= 1
+    bi = fishing["best_index"]
+    assert isinstance(bi, int)
+    assert 0 <= bi < len(days)
+    # best_index should point to the max score
+    best_score = days[bi]["score"]
+    assert best_score == max(x["score"] for x in days)
+
+
+class TestFishing:
+    def test_fishing_marine_default_7d(self, client):
+        r = client.get(f"{API}/weather", params={"lat": -23.96, "lon": -46.33, "marine": "true"})
+        assert r.status_code == 200
+        d = r.json()
+        assert len(d["daily"]["time"]) == 7
+        _assert_fishing_shape(d.get("fishing"), 7)
+        # dates in fishing.days must match daily.time in order
+        assert [f["date"] for f in d["fishing"]["days"]] == d["daily"]["time"]
+
+    def test_fishing_river_no_marine(self, client):
+        r = client.get(f"{API}/weather", params={"lat": -3.11, "lon": -60.02, "marine": "false"})
+        assert r.status_code == 200
+        d = r.json()
+        assert len(d["daily"]["time"]) == 7
+        _assert_fishing_shape(d.get("fishing"), 7)
+
+    def test_fishing_with_14_day_range(self, client):
+        from datetime import date, timedelta
+        today = date.today()
+        s = today.isoformat()
+        e = (today + timedelta(days=13)).isoformat()
+        r = client.get(
+            f"{API}/weather",
+            params={"lat": -23.96, "lon": -46.33, "marine": "true", "start_date": s, "end_date": e},
+        )
+        assert r.status_code == 200
+        d = r.json()
+        assert len(d["daily"]["time"]) == 14
+        _assert_fishing_shape(d.get("fishing"), 14)
+        assert d["fishing"]["days"][0]["date"] == s
+        assert d["fishing"]["days"][-1]["date"] == e
+
+
 # ----------------------- Favorites CRUD -----------------------
 class TestFavorites:
     fav_id = "TEST_fav_santos_zzz"

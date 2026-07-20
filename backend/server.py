@@ -159,6 +159,88 @@ def estimate_tides(dt: datetime, tz_offset_hours: float):
     return {"events": events, "type_note": coeff}
 
 
+def fishing_scores(daily, hourly):
+    """Rank each forecast day for fishing quality using wind, pressure trend,
+    moon phase and rain probability. Returns list + index of best day."""
+    times = (daily or {}).get("time") or []
+    if not times:
+        return {"days": [], "best_index": None}
+
+    wind_max = daily.get("wind_speed_10m_max") or []
+    precip_prob = daily.get("precipitation_probability_max") or []
+
+    # Per-date pressure trend from hourly surface_pressure
+    press_by_date = {}
+    h_time = (hourly or {}).get("time") or []
+    h_press = (hourly or {}).get("surface_pressure") or []
+    for t, p in zip(h_time, h_press):
+        if p is None:
+            continue
+        d = t[:10]
+        press_by_date.setdefault(d, []).append(p)
+
+    def clamp(v, lo=0, hi=100):
+        return max(lo, min(hi, v))
+
+    results = []
+    for i, day in enumerate(times):
+        wind = wind_max[i] if i < len(wind_max) and wind_max[i] is not None else 20
+        pprob = precip_prob[i] if i < len(precip_prob) and precip_prob[i] is not None else 0
+        plist = press_by_date.get(day, [])
+        p_trend = (plist[-1] - plist[0]) if len(plist) >= 2 else 0.0
+        illum = moon_phase(datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=timezone.utc))["illumination"]
+
+        wind_score = clamp(100 - wind * 2.5)
+        # Falling pressure favours fishing
+        if p_trend <= -3:
+            press_score = 100
+        elif p_trend >= 4:
+            press_score = 35
+        else:
+            press_score = clamp(70 - p_trend * 8)
+        rain_score = clamp(100 - pprob)
+        moon_score = clamp(60 + 40 * abs(illum - 50) / 50)
+
+        total = round(wind_score * 0.35 + press_score * 0.30 + moon_score * 0.20 + rain_score * 0.15)
+        if total >= 75:
+            rating = "Excelente"
+        elif total >= 60:
+            rating = "Boa"
+        elif total >= 45:
+            rating = "Moderada"
+        else:
+            rating = "Fraca"
+
+        reasons = []
+        reasons.append("Vento fraco" if wind < 18 else ("Vento moderado" if wind < 30 else "Vento forte"))
+        if p_trend <= -1.5:
+            reasons.append("Pressão caindo")
+        elif p_trend >= 1.5:
+            reasons.append("Pressão subindo")
+        else:
+            reasons.append("Pressão estável")
+        reasons.append("Lua favorável" if moon_score >= 80 else "Lua neutra")
+        if pprob >= 70:
+            reasons.append("Alta chance de chuva")
+        elif pprob <= 20:
+            reasons.append("Céu seco")
+
+        results.append({
+            "date": day,
+            "score": total,
+            "rating": rating,
+            "reasons": reasons,
+            "wind": round(wind),
+            "pressure_trend": round(p_trend, 1),
+            "precip_prob": round(pprob),
+            "moon_illum": illum,
+        })
+
+    best_index = max(range(len(results)), key=lambda k: results[k]["score"]) if results else None
+    return {"days": results, "best_index": best_index}
+
+
+
 # ----------------------- API routes -----------------------
 @api_router.get("/")
 async def root():
@@ -304,6 +386,7 @@ async def weather(
     sunset = daily.get("sunset", [None])[0] if daily.get("sunset") else None
     result["solunar"] = solunar_periods(now, tz_offset, sunrise, sunset)
     result["tides"] = estimate_tides(now, tz_offset)
+    result["fishing"] = fishing_scores(result.get("daily", {}), result.get("hourly", {}))
     result["period"] = period
     return result
 

@@ -3,7 +3,7 @@ import { MapPin, Loader2, RefreshCw, Layers } from "lucide-react";
 import DateRangePicker from "@/components/DateRangePicker";
 import {
   WindCard, PressureCard, ConditionCard, WaveCard, TideCard,
-  SolunarCard, MoonCard, HourlyStrip, DailyCard, Card,
+  SolunarCard, MoonCard, HourlyStrip, DailyCard, BestDayCard, Card,
 } from "@/components/WeatherCards";
 
 const stagger = {
@@ -76,6 +76,7 @@ export default function Dashboard({ location, weather, loading, error, range, on
             <PressureCard cur={weather.current} hourly={weather.hourly} />
             <ConditionCard cur={weather.current} daily={weather.daily} />
             <MoonCard moon={weather.solunar?.moon} daily={weather.daily} />
+            <BestDayCard fishing={weather.fishing} />
             <WindyMap lat={weather.lat} lon={weather.lon} />
             <WaveCard marine={weather.marine_current} available={weather.marine_available} />
             <SolunarCard solunar={weather.solunar} />
