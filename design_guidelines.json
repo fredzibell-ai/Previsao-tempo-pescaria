@@ -1,0 +1,130 @@
+{
+  "project_name": "Nautitude & Windy - Fishermen Weather Dashboard",
+  "theme_and_color": {
+    "mode": "light",
+    "strategy": "Editorial Nautical / High-Contrast Swiss",
+    "palette": {
+      "background": "#F9F9F6",
+      "card_background": "#FFFFFF",
+      "foreground": "#0A192F",
+      "primary": "#005B96",
+      "primary_hover": "#004370",
+      "accent": "#E25A3B",
+      "accent_hover": "#C84325",
+      "muted": "#E5E7EB",
+      "muted_foreground": "#4B5563",
+      "border": "#D1D5DB"
+    },
+    "rules": [
+      "NO PURPLE/AI-SLOP gradients. Stick to solid blocks of color with subtle noise textures.",
+      "High contrast is non-negotiable. Deep navy (#0A192F) must be used for text to ensure visibility.",
+      "Use Accent color (Terracotta/Signal Red) strictly for warnings, active states, or critical pressure drops."
+    ]
+  },
+  "typography": {
+    "strategy": "The 'Old Money Tech' - Classic Serif Headings + Sterile Mono Body",
+    "fonts": {
+      "headings": "'Cormorant Garamond', 'Playfair Display', serif",
+      "body_and_data": "'IBM Plex Mono', 'JetBrains Mono', monospace",
+      "banned": ["Inter", "Roboto", "Open Sans", "Lato"]
+    },
+    "sizing": {
+      "h1": "text-5xl sm:text-6xl md:text-7xl tracking-tighter leading-none font-medium",
+      "h2": "text-3xl md:text-5xl tracking-tight leading-none",
+      "h3": "text-xl md:text-2xl",
+      "data_value": "text-3xl md:text-4xl font-mono tracking-tight",
+      "data_label": "text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground",
+      "body": "text-base font-mono leading-relaxed"
+    },
+    "rules": [
+      "Headings must use the Serif font, imparting a premium, editorial feel.",
+      "All weather data (wind speeds, pressure, coordinates) MUST use the Monospace font for tabular clarity.",
+      "Never center-align paragraphs. Use optical alignment and generous left-padding for blocks of text."
+    ]
+  },
+  "layout_and_spacing": {
+    "strategy": "Bento Grid (The 'Tetris' Mode) + Generous Padding",
+    "spacing_scale": "Use 2x normal spacing (p-6, p-8, p-12, py-24)",
+    "grids": {
+      "dashboard": "grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4 md:gap-6",
+      "rules": [
+        "Dashboard widgets must span varying columns (e.g., Main Map: col-span-full md:col-span-4, Wind Card: col-span-2, Stats: col-span-2).",
+        "Never fill 100% of the screen with a single element. Keep breathing room.",
+        "Use align-items: start to prevent default stretching unless explicitly needed."
+      ]
+    }
+  },
+  "surface_strategies": {
+    "dashboard_cards": "Grid Borders (The 'Technical' Look). Flat solid backgrounds (#FFFFFF) on #F9F9F6 body, with sharp 1px borders (border-border), no soft drop shadows.",
+    "header_nav": "Crystal Glassmorphism. bg-white/70, backdrop-blur-xl, 1px bottom border.",
+    "hero_overlay": "Light tint (bg-white/30) over the hero image, text must remain high contrast.",
+    "texture": "Add a global SVG noise overlay (opacity-5) to kill digital flatness and give a raw, outdoor feel."
+  },
+  "components": {
+    "hero": {
+      "description": "Kinetic typography hero. Line-by-line staggered reveal of the headline (e.g., 'Previsão Exata.', 'Pesca Segura.'). Minimalist layout over a highly curated maritime background."
+    },
+    "navigation_search": {
+      "description": "Sticky glass header with a sophisticated location search bar. Must include quick preset buttons: 'Mar Aberto', 'Litoral SP', 'Bacia Amazônica', 'Barragens SP'."
+    },
+    "windy_map": {
+      "description": "Embedded Windy iframe (https://embed.windy.com) inside a responsive Bento card. Must allow interaction.",
+      "span": "col-span-full lg:col-span-4 row-span-2"
+    },
+    "weather_widgets": {
+      "priority_1": "Wind (Direction & Speed in km/h) - visual compass indicator.",
+      "priority_2": "Atmospheric Pressure - large mono number with trend arrow (up/down).",
+      "others": "Waves height/period, Tides table, Water Temp, Solunar best times, Moon phases, Rain probability."
+    },
+    "manifesto_chapters": {
+      "description": "Editorial numbered section (e.g., '01 / O Vento', '02 / A Maré') detailing the importance of reading the weather for fishing."
+    },
+    "marquee": {
+      "description": "Slow, elegant scrolling text using the Serif font: 'PREVISÃO MARÍTIMA E FLUVIAL — DADOS EM TEMPO REAL — NAUTITUDE & WINDY'."
+    }
+  },
+  "motion_and_interactions": {
+    "scrolling": "MANDATORY: Use '@studio-freight/lenis' for buttery smooth momentum scrolling. This is critical for the premium feel.",
+    "animations": "framer-motion for stagger-children on the bento grid cards (fade up, slow ease).",
+    "microinteractions": "Hover states on preset buttons should feature a subtle background fill and text color change. Cards should not have bouncy scale animations; keep it rigid and technical."
+  },
+  "image_urls": {
+    "hero_background": {
+      "url": "https://images.pexels.com/photos/1043491/pexels-photo-1043491.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Fisherman with boat on the shoreline during dawn. Used as the main landing page kinetic hero background.",
+      "placement": "Hero Section Background"
+    },
+    "amazon_preset_visual": {
+      "url": "https://images.pexels.com/photos/17025853/pexels-photo-17025853.jpeg",
+      "description": "Aerial view of a boat on the muddy Amazon river.",
+      "placement": "Manifesto / Editorial imagery for river fishing context"
+    },
+    "nautical_texture": {
+      "url": "https://images.unsplash.com/photo-1596902184143-20d0cec03dbb",
+      "description": "White and black analog gauge.",
+      "placement": "Decorative element in the Dashboard or Manifesto section"
+    }
+  },
+  "instructions_to_main_agent": {
+    "setup": [
+      "Install dependencies: framer-motion, @studio-freight/lenis, lucide-react, react-fast-marquee.",
+      "Add custom fonts (Cormorant Garamond, IBM Plex Mono) via Google Fonts in index.html or global CSS.",
+      "Configure Tailwind colors based on the palette above."
+    ],
+    "execution_steps": [
+      "1. Setup Lenis wrapper in App.js for smooth scrolling.",
+      "2. Build the Crystal Glass Header with location search and preset pills.",
+      "3. Build the Kinetic Hero section with Framer Motion staggered text reveal.",
+      "4. Develop the Dashboard section (Bento Grid): incorporate Windy iframe map, and mock the weather data components (Wind compass, Pressure, Tides, Solunar) using Shadcn-like flat cards.",
+      "5. Implement the Editorial Chapter section and the slow Marquee.",
+      "6. Add a subtle global noise texture overlay using CSS or a base64 SVG pattern."
+    ],
+    "language": "All UI copy MUST be in Brazilian Portuguese (pt-BR)."
+  },
+  "universal_guidelines": {
+    "testing": "All interactive and key informational elements MUST include a 'data-testid' attribute (e.g., data-testid='search-input', data-testid='wind-card').",
+    "anti_slop": "Do not center align paragraphs. Do not use generic borders or box-shadows. Stick to flat, sharp, high-contrast aesthetics.",
+    "accessibility": "Ensure contrast ratios for text on images. Use overlays where necessary to protect text legibility.",
+    "components": "Use custom raw HTML/Tailwind for the landing page hero and manifesto for maximum creative freedom. Use strict grid rules for the weather dashboard cards."
+  }
+}
