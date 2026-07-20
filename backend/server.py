@@ -101,11 +101,8 @@ def moon_phase(dt: datetime):
     }
 
 
-def solunar_periods(dt: datetime, tz_offset_hours: float, sunrise: Optional[str], sunset: Optional[str]):
-    """Approximate solunar major/minor periods.
-    Major periods ~ lunar transit (overhead) and underfoot.
-    Minor periods ~ moonrise/moonset (transit +/- 6h).
-    """
+def solunar_windows(dt: datetime):
+    """Return solunar major/minor time windows for a given date (approximation)."""
     mp = moon_phase(dt)
     age = mp["age_days"]
     # Lunar transit shifts ~0.83h later per day after new moon; at new moon near local noon.
@@ -127,6 +124,12 @@ def solunar_periods(dt: datetime, tz_offset_hours: float, sunrise: Optional[str]
         {"start": hm(minor1 - 0.5), "end": hm(minor1 + 0.5), "label": "Nascer da lua"},
         {"start": hm(minor2 - 0.5), "end": hm(minor2 + 0.5), "label": "Pôr da lua"},
     ]
+    return majors, minors, mp
+
+
+def solunar_periods(dt: datetime, tz_offset_hours: float, sunrise: Optional[str], sunset: Optional[str]):
+    """Approximate solunar major/minor periods for the current day."""
+    majors, minors, mp = solunar_windows(dt)
     # Simple activity rating: fuller / newer moon => higher peak activity
     illum = mp["illumination"]
     if illum < 10 or illum > 90:
@@ -194,7 +197,9 @@ def fishing_scores(daily, hourly):
         pprob = precip_prob[i] if i < len(precip_prob) and precip_prob[i] is not None else 0
         plist = press_by_date.get(day, [])
         p_trend = (plist[-1] - plist[0]) if len(plist) >= 2 else 0.0
-        illum = moon_phase(datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=timezone.utc))["illumination"]
+        day_dt = datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        majors, minors, mp_day = solunar_windows(day_dt)
+        illum = mp_day["illumination"]
 
         wind_score = clamp(100 - wind * 2.5)
         # Falling pressure favours fishing
@@ -240,6 +245,8 @@ def fishing_scores(daily, hourly):
             "pressure_trend": round(p_trend, 1),
             "precip_prob": round(pprob),
             "moon_illum": illum,
+            "best_times": majors,
+            "minor_times": minors,
         })
 
     best_index = max(range(len(results)), key=lambda k: results[k]["score"]) if results else None

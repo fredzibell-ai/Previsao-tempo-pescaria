@@ -23,14 +23,14 @@ class TestHealth:
 
 
 class TestPresets:
-    def test_presets_returns_12(self, client):
+    def test_presets_returns_16(self, client):
         r = client.get(f"{API}/presets")
         assert r.status_code == 200
         data = r.json()
         assert "spots" in data
         spots = data["spots"]
         assert isinstance(spots, list)
-        assert len(spots) == 12
+        assert len(spots) == 16
         # validate schema of first entry
         for s in spots:
             for k in ("id", "name", "region", "category", "lat", "lon"):
@@ -41,8 +41,20 @@ class TestPresets:
     def test_presets_include_expected_regions(self, client):
         spots = client.get(f"{API}/presets").json()["spots"]
         regions = {s["region"] for s in spots}
-        for expected in ("Litoral SP", "Bacia Amazônica", "Mato Grosso", "Barragens SP"):
+        for expected in ("Litoral SP", "Bacia Amazônica", "Mato Grosso", "Barragens SP", "Santa Catarina", "Rio Grande do Sul"):
             assert expected in regions
+
+    def test_presets_include_sc_and_rs_spots(self, client):
+        spots = client.get(f"{API}/presets").json()["spots"]
+        ids = {s["id"] for s in spots}
+        # Santa Catarina
+        for sid in ("sc-barra-do-sul", "sc-picarras", "sc-florianopolis"):
+            assert sid in ids, f"missing SC preset {sid}"
+        # Rio Grande do Sul
+        assert "rs-balneario-mostardense" in ids
+        names = {s["name"] for s in spots}
+        for n in ("Barra do Sul", "Balneário Piçarras", "Florianópolis", "Balneário Mostardense"):
+            assert n in names, f"missing preset name {n}"
 
 
 # ----------------------- Geocode -----------------------
@@ -201,7 +213,28 @@ class TestWeatherDateRange:
 
 
 # ----------------------- Fishing scores (NEW) -----------------------
+import re
+HHMM_RE = re.compile(r"^\d{2}:\d{2}$")
+
 VALID_RATINGS = {"Excelente", "Boa", "Moderada", "Fraca"}
+
+
+def _assert_time_window(t, allowed_labels=None):
+    for k in ("start", "end", "label"):
+        assert k in t, f"time window missing {k}"
+    assert HHMM_RE.match(t["start"]), f"invalid start {t['start']}"
+    assert HHMM_RE.match(t["end"]), f"invalid end {t['end']}"
+    # bounds
+    for key in ("start", "end"):
+        hh, mm = t[key].split(":")
+        assert 0 <= int(hh) < 24
+        assert 0 <= int(mm) < 60
+    if allowed_labels is not None:
+        assert t["label"] in allowed_labels, f"unexpected label {t['label']}"
+
+
+MAJOR_LABELS = {"Lua no zênite", "Lua no nadir"}
+MINOR_LABELS = {"Nascer da lua", "Pôr da lua"}
 
 
 def _assert_fishing_shape(fishing, expected_days):
@@ -211,11 +244,19 @@ def _assert_fishing_shape(fishing, expected_days):
     assert isinstance(days, list)
     assert len(days) == expected_days
     for d in days:
-        for k in ("date", "score", "rating", "reasons", "wind", "pressure_trend", "precip_prob", "moon_illum"):
+        for k in ("date", "score", "rating", "reasons", "wind", "pressure_trend", "precip_prob", "moon_illum",
+                 "best_times", "minor_times"):
             assert k in d, f"fishing.day missing key {k}"
         assert 0 <= d["score"] <= 100
         assert d["rating"] in VALID_RATINGS
         assert isinstance(d["reasons"], list) and len(d["reasons"]) >= 1
+        # New: best_times (majors) & minor_times
+        assert isinstance(d["best_times"], list) and len(d["best_times"]) == 2
+        assert isinstance(d["minor_times"], list) and len(d["minor_times"]) == 2
+        for t in d["best_times"]:
+            _assert_time_window(t, MAJOR_LABELS)
+        for t in d["minor_times"]:
+            _assert_time_window(t, MINOR_LABELS)
     bi = fishing["best_index"]
     assert isinstance(bi, int)
     assert 0 <= bi < len(days)
@@ -256,6 +297,30 @@ class TestFishing:
         _assert_fishing_shape(d.get("fishing"), 14)
         assert d["fishing"]["days"][0]["date"] == s
         assert d["fishing"]["days"][-1]["date"] == e
+
+    def test_fishing_best_times_balneario_mostardense_marine(self, client):
+        """NEW: Best/minor times must exist for the default location (RS coords)."""
+        r = client.get(f"{API}/weather", params={"lat": -31.2394, "lon": -50.9053, "marine": "true"})
+        assert r.status_code == 200
+        d = r.json()
+        _assert_fishing_shape(d.get("fishing"), 7)
+        # Sanity: solunar 'major' labels should match the day labels
+        for day in d["fishing"]["days"]:
+            labels_major = {t["label"] for t in day["best_times"]}
+            labels_minor = {t["label"] for t in day["minor_times"]}
+            assert labels_major.issubset(MAJOR_LABELS)
+            assert labels_minor.issubset(MINOR_LABELS)
+
+    def test_fishing_best_times_river_manaus(self, client):
+        """NEW: Best/minor times must exist for a river (non-marine) point."""
+        r = client.get(f"{API}/weather", params={"lat": -3.11, "lon": -60.02, "marine": "false"})
+        assert r.status_code == 200
+        d = r.json()
+        _assert_fishing_shape(d.get("fishing"), 7)
+        # every day has 2 majors + 2 minors
+        for day in d["fishing"]["days"]:
+            assert len(day["best_times"]) == 2
+            assert len(day["minor_times"]) == 2
 
 
 # ----------------------- Favorites CRUD -----------------------

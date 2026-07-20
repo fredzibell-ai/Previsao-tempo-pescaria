@@ -1,0 +1,35 @@
+{
+  "summary": "Full backend + frontend validation of the NEW 'Melhores horários de pesca' feature added to BestDayCard: each fishing day now includes best_times (2 major solunar windows: 'Lua no zênite' & 'Lua no nadir') and minor_times (2 minor windows: 'Nascer da lua' & 'Pôr da lua'). Backend: 23/23 pytest tests pass — added TestPresets.test_presets_returns_16 (was 12), TestPresets.test_presets_include_sc_and_rs_spots, extended _assert_fishing_shape to require best_times/minor_times with HH:MM validation + label sets, added TestFishing.test_fishing_best_times_balneario_mostardense_marine and .test_fishing_best_times_river_manaus. Frontend: initial location IS Balneário Mostardense with hero button 'VER PREVISÃO DE BALNEÁRIO MOSTARDENSE', best-day-times block shows both majors + 'Secundários:' line (e.g. '20:06 – 22:06 Lua no zênite'), fishing-times-0 shows two windows like '15:14–17:14 · 03:14–05:14', all 7 default rows have times lines, Locais dropdown shows Rio Grande do Sul + Santa Catarina groups, preset-14d expands ranking to 14 rows each with times (fishing-times-13 verified), favorites toggle updates localStorage with rs-balneario-mostardense entry, Windy iframe embed present with correct coords.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/weather (marine=false)", "issue": "marine_available returned as null/undefined instead of explicit false (carried over from earlier iterations; not a functional issue since JS falsy check handles it in WaveCard)"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_mare_alta_backend.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py solunar_windows: transit approximation ignores actual longitude (only uses moon age); windows are indicative not astronomical. Acceptable for advisory UI as noted in the spec.",
+    "server.py fishing_scores: best_times/minor_times are computed per-date but the values are identical for the same UTC date across all locations (no lon offset applied); OK per advisory scope but could be documented.",
+    "server.py: hourly.surface_pressure used for pressure_trend; for future days trend is 24h delta, for today it's partial-day delta. Consistent with previous behaviour.",
+    "WeatherCards.jsx: BestDayCard block ~85 lines and file is now ~360 lines total; still maintainable but consider splitting BestDayCard/DailyCard/HourlyStrip once >500."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mare_alta_backend.py (updated preset count 12->16, added SC/RS assertions, extended _assert_fishing_shape to validate best_times/minor_times HH:MM + labels, added 2 new TestFishing tests)"
+  ],
+  "success_rate": {"backend": "100% (23/23)", "frontend": "100%"},
+  "test_credentials": "None required - no auth",
+  "seed_data_creation": "TEST_fav_santos_zzz favorite created & cleaned up during favorites CRUD tests (idempotent)",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "23 backend pytest tests in /app/backend/tests/test_mare_alta_backend.py (TestHealth, TestPresets x3, TestGeocode x3, TestWeatherMarine, TestWeatherRiver, TestWeatherDateRange x5, TestFishing x5, TestFavorites x4). All pass on 2026-07-20. best_times labels must be from {'Lua no zênite','Lua no nadir'} and minor_times from {'Nascer da lua','Pôr da lua'}. Frontend testids of note: best-day-card, best-day-times, fishing-day-{i}, fishing-times-{i}, daterange-trigger, preset-14d, presets-toggle, toggle-favorite. React StrictMode remount + Lenis smooth scroll → after clicking a preset that reloads weather, wait ~6s and then re-wait for best-day-card selector before reading text; use el.evaluate('e => e.click()') for reliable clicks. Use domcontentloaded (not networkidle) since Windy iframe never idles.",
+  "rca of the issue": "No bugs to RCA. New feature is correctly implemented end-to-end: backend solunar_windows(dt) computes majors/minors as 2h/1h windows centered on lunar transit/underfoot/rise/set; fishing_scores attaches best_times & minor_times to each day; BestDayCard renders best-day-times block in the highlight panel and a per-row fishing-times-{i} line in the ranking; every day in a 14-day range produces 2 majors + 2 minors."
+}

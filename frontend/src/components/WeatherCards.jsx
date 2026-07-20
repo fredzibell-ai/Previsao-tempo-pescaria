@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import {
   Wind, Gauge, ArrowUp, ArrowDown, Minus, Waves, Thermometer, Droplets,
   Sun, Cloud, CloudSun, CloudRain, CloudRainWind, CloudDrizzle, CloudSnow,
-  CloudFog, CloudLightning, Moon, Fish, ArrowUpRight, ArrowDownRight, Trophy, Sparkles,
+  CloudFog, CloudLightning, Moon, Fish, ArrowUpRight, ArrowDownRight, Trophy, Sparkles, Clock,
 } from "lucide-react";
 import { degToCompass, weatherCodeMap, fmtDay, fmtHour, pressureTrend, currentHourIndex } from "@/lib/weather";
 
@@ -307,26 +307,50 @@ export function BestDayCard({ fishing }) {
               </span>
             ))}
           </div>
+          <div className="mt-6 border-t border-background/20 pt-4" data-testid="best-day-times">
+            <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-accent">
+              <Clock className="h-3 w-3" /> Melhores horários de pesca
+            </p>
+            <div className="mt-2 space-y-1.5">
+              {(best.best_times || []).map((t, i) => (
+                <div key={i} className="flex items-baseline justify-between gap-3">
+                  <span className="font-mono text-lg text-background">{t.start} – {t.end}</span>
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-background/60">{t.label}</span>
+                </div>
+              ))}
+            </div>
+            {best.minor_times?.length > 0 && (
+              <p className="mt-2 font-mono text-[11px] text-background/60">
+                Secundários: {best.minor_times.map((t) => `${t.start}–${t.end}`).join(" · ")}
+              </p>
+            )}
+          </div>
         </div>
         {/* Ranked list */}
         <div className="p-5 lg:col-span-3 md:p-6">
           <div className="flex items-center justify-between"><Label>Ranking de pesca do período</Label><Fish className="h-4 w-4 text-primary" /></div>
-          <div className="mt-4 space-y-2.5">
+          <div className="mt-4 space-y-3">
             {days.map((d, i) => (
-              <div key={d.date} className="flex items-center gap-3" data-testid={`fishing-day-${i}`}>
-                <span className="w-24 shrink-0 font-mono text-xs text-foreground">{fmtDay(d.date)}</span>
-                <div className="relative h-4 flex-1 border border-border bg-muted">
-                  <div
-                    className={`h-full ${i === fishing.best_index ? "bg-accent" : "bg-primary"}`}
-                    style={{ width: `${d.score}%` }}
-                  />
+              <div key={d.date} data-testid={`fishing-day-${i}`}>
+                <div className="flex items-center gap-3">
+                  <span className="w-24 shrink-0 font-mono text-xs text-foreground">{fmtDay(d.date)}</span>
+                  <div className="relative h-4 flex-1 border border-border bg-muted">
+                    <div
+                      className={`h-full ${i === fishing.best_index ? "bg-accent" : "bg-primary"}`}
+                      style={{ width: `${d.score}%` }}
+                    />
+                  </div>
+                  <span className={`w-10 shrink-0 text-right font-mono text-sm ${ratingColor(d.rating)}`}>{d.score}</span>
                 </div>
-                <span className={`w-10 shrink-0 text-right font-mono text-sm ${ratingColor(d.rating)}`}>{d.score}</span>
+                <p className="mt-1 flex items-center gap-1.5 pl-1 font-mono text-[11px] text-muted-foreground" data-testid={`fishing-times-${i}`}>
+                  <Clock className="h-3 w-3 text-primary" />
+                  {(d.best_times || []).map((t) => `${t.start}–${t.end}`).join("  ·  ")}
+                </p>
               </div>
             ))}
           </div>
           <p className="mt-4 font-mono text-[11px] text-muted-foreground">
-            Pontuação combina vento fraco, pressão em queda, fase da lua e baixa chuva.
+            Horários solunares (períodos maiores). Pontuação combina vento fraco, pressão em queda, fase da lua e baixa chuva.
           </p>
         </div>
       </div>
