@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Search, Star, MapPin, Anchor, ChevronDown, X, Loader2 } from "lucide-react";
+import { Search, Star, MapPin, ChevronDown, X, Loader2 } from "lucide-react";
 import { geocode, fetchPresets } from "@/lib/weather";
 
 const PRESET_GROUPS = [
@@ -66,9 +66,9 @@ export default function Header({ onSelect, favorites, current, isFav, onToggleFa
       className="sticky top-0 z-50 w-full border-b border-border bg-white/70 backdrop-blur-xl"
     >
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-3 px-4 py-3 md:px-8 md:py-4">
-        <div className="flex items-center gap-2 pr-2" data-testid="brand-logo">
-          <Anchor className="h-5 w-5 text-primary" strokeWidth={1.5} />
-          <span className="font-serif text-2xl font-semibold tracking-tight text-foreground">Maré Alta</span>
+        <div className="flex items-center gap-2.5 pr-2" data-testid="brand-logo">
+          <img src="/logo-pescaria.png" alt="Previsão Tempo Pescaria" className="h-9 w-auto" />
+          <span className="font-serif text-base font-semibold leading-none tracking-tight text-foreground sm:text-xl">Previsão Tempo Pescaria</span>
         </div>
 
         {/* Search */}
