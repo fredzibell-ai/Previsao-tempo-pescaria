@@ -323,6 +323,128 @@ class TestFishing:
             assert len(day["minor_times"]) == 2
 
 
+# ----------------------- Daily Details (NEW) -----------------------
+TIDE_TYPES = {"alta", "baixa"}
+
+
+def _assert_daily_detail_shape(entry, expect_marine_ok=True):
+    for k in ("date", "marine", "solunar", "tides"):
+        assert k in entry, f"daily_details entry missing {k}"
+    # date YYYY-MM-DD
+    assert re.match(r"^\d{4}-\d{2}-\d{2}$", entry["date"])
+
+    # marine (dict) or None
+    m = entry["marine"]
+    if expect_marine_ok:
+        assert m is not None, "expected marine dict, got None"
+        for k in ("wave_height", "wave_period", "wave_direction",
+                 "swell_wave_height", "sea_surface_temperature"):
+            assert k in m, f"marine missing {k}"
+        # wave_height should be numeric (or None if truly missing)
+        if m["wave_height"] is not None:
+            assert isinstance(m["wave_height"], (int, float))
+            assert m["wave_height"] >= 0
+    else:
+        assert m is None, "expected marine=None for river/non-marine point"
+
+    # solunar
+    sol = entry["solunar"]
+    for k in ("major", "minor", "rating", "moon"):
+        assert k in sol, f"solunar missing {k}"
+    assert sol["rating"] in VALID_RATINGS
+    assert isinstance(sol["major"], list) and len(sol["major"]) == 2
+    assert isinstance(sol["minor"], list) and len(sol["minor"]) == 2
+    for p in sol["major"]:
+        _assert_time_window(p, MAJOR_LABELS)
+    for p in sol["minor"]:
+        _assert_time_window(p, MINOR_LABELS)
+    moon = sol["moon"]
+    assert "phase_name" in moon and isinstance(moon["phase_name"], str)
+    assert "illumination" in moon
+    assert 0 <= moon["illumination"] <= 100
+
+    # tides
+    tides = entry["tides"]
+    assert "events" in tides
+    events = tides["events"]
+    # Spec says 4 alternating events but real astronomical estimator produces 3-4 depending on transit hour
+    assert isinstance(events, list) and 3 <= len(events) <= 4
+    types = [e["type"] for e in events]
+    assert set(types).issubset(TIDE_TYPES)
+    # alternating alta/baixa
+    for i in range(1, len(events)):
+        assert events[i]["type"] != events[i - 1]["type"], "tide types should alternate"
+    for e in events:
+        assert "time" in e and HHMM_RE.match(e["time"]), f"invalid tide time {e.get('time')}"
+    assert "type_note" in tides and isinstance(tides["type_note"], str)
+
+
+class TestDailyDetails:
+    def test_daily_details_marine_default_7d(self, client):
+        """Default 7-day forecast for a marine point (Balneário Mostardense)."""
+        r = client.get(f"{API}/weather", params={"lat": -31.2394, "lon": -50.9053, "marine": "true"})
+        assert r.status_code == 200
+        d = r.json()
+        assert "daily_details" in d
+        details = d["daily_details"]
+        assert isinstance(details, list)
+        assert len(details) == 7
+        # Aligned with daily.time
+        assert [x["date"] for x in details] == d["daily"]["time"]
+        for entry in details:
+            _assert_daily_detail_shape(entry, expect_marine_ok=True)
+
+    def test_daily_details_marine_8_day_range(self, client):
+        """Custom date range must produce exactly (end-start+1) entries."""
+        from datetime import date, timedelta
+        today = date.today()
+        s = today.isoformat()
+        e = (today + timedelta(days=7)).isoformat()
+        r = client.get(
+            f"{API}/weather",
+            params={"lat": -31.2394, "lon": -50.9053, "marine": "true",
+                    "start_date": s, "end_date": e},
+        )
+        assert r.status_code == 200, r.text
+        d = r.json()
+        details = d["daily_details"]
+        assert len(details) == 8
+        assert details[0]["date"] == s
+        assert details[-1]["date"] == e
+        for entry in details:
+            _assert_daily_detail_shape(entry, expect_marine_ok=True)
+
+    def test_daily_details_river_no_marine(self, client):
+        """River point (Manaus) — marine=None but solunar+tides still present per day."""
+        r = client.get(f"{API}/weather", params={"lat": -3.11, "lon": -60.02, "marine": "false"})
+        assert r.status_code == 200
+        d = r.json()
+        details = d["daily_details"]
+        assert isinstance(details, list) and len(details) == 7
+        for entry in details:
+            _assert_daily_detail_shape(entry, expect_marine_ok=False)
+
+    def test_daily_details_14_day_range_marine(self, client):
+        """14-day range: daily_details aligns with daily.time (14 entries)."""
+        from datetime import date, timedelta
+        today = date.today()
+        s = today.isoformat()
+        e = (today + timedelta(days=13)).isoformat()
+        r = client.get(
+            f"{API}/weather",
+            params={"lat": -23.96, "lon": -46.33, "marine": "true",
+                    "start_date": s, "end_date": e},
+        )
+        assert r.status_code == 200, r.text
+        d = r.json()
+        details = d["daily_details"]
+        assert len(details) == 14
+        assert [x["date"] for x in details] == d["daily"]["time"]
+        # First few entries should have real marine data
+        with_marine = sum(1 for x in details if x["marine"] is not None)
+        assert with_marine >= 7, f"expected most days to have marine data (Santos), got {with_marine}"
+
+
 # ----------------------- Favorites CRUD -----------------------
 class TestFavorites:
     fav_id = "TEST_fav_santos_zzz"

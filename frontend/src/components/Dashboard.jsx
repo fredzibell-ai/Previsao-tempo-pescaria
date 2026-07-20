@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { MapPin, Loader2, RefreshCw, Layers } from "lucide-react";
 import DateRangePicker from "@/components/DateRangePicker";
+import DailyDetails from "@/components/DailyDetails";
 import {
   WindCard, PressureCard, ConditionCard, WaveCard, TideCard,
   SolunarCard, MoonCard, HourlyStrip, DailyCard, BestDayCard, Card,
@@ -84,6 +85,10 @@ export default function Dashboard({ location, weather, loading, error, range, on
             <HourlyStrip hourly={weather.hourly} />
             <DailyCard daily={weather.daily} period={weather.period} />
           </motion.div>
+        )}
+
+        {weather && (
+          <DailyDetails details={weather.daily_details} period={weather.period} />
         )}
       </div>
     </section>

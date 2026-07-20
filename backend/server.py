@@ -253,6 +253,67 @@ def fishing_scores(daily, hourly):
     return {"days": results, "best_index": best_index}
 
 
+def daily_details(daily, marine_hourly, tz_offset_hours):
+    """Per-day breakdown of marine (waves), solunar windows and tide estimates."""
+    times = (daily or {}).get("time") or []
+    if not times:
+        return []
+
+    # Group marine hourly values by date
+    m_by_date = {}
+    mh = marine_hourly or {}
+    mt = mh.get("time") or []
+    if mt:
+        for i, t in enumerate(mt):
+            d = t[:10]
+            bucket = m_by_date.setdefault(d, {"wh": [], "wp": [], "wd": [], "sw": [], "sst": []})
+            def add(key, arr):
+                if i < len(arr) and arr[i] is not None:
+                    bucket[key].append(arr[i])
+            add("wh", mh.get("wave_height") or [])
+            add("wp", mh.get("wave_period") or [])
+            add("wd", mh.get("wave_direction") or [])
+            add("sw", mh.get("swell_wave_height") or [])
+            add("sst", mh.get("sea_surface_temperature") or [])
+
+    def mean(xs):
+        return round(sum(xs) / len(xs), 1) if xs else None
+
+    out = []
+    for day in times:
+        day_dt = datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        majors, minors, mp = solunar_windows(day_dt)
+        illum = mp["illumination"]
+        rating = "Excelente" if (illum < 10 or illum > 90) else ("Boa" if (illum < 30 or illum > 70) else "Moderada")
+
+        marine = None
+        b = m_by_date.get(day)
+        if b and b["wh"]:
+            # dominant direction = direction at the hour of max wave height
+            wdir = None
+            if b["wd"]:
+                idx = b["wh"].index(max(b["wh"])) if b["wh"] else 0
+                wdir = b["wd"][idx] if idx < len(b["wd"]) else b["wd"][0]
+            marine = {
+                "wave_height": mean(b["wh"]),
+                "wave_period": (round(mean(b["wp"])) if b["wp"] else None),
+                "wave_direction": (round(wdir) if wdir is not None else None),
+                "swell_wave_height": mean(b["sw"]),
+                "sea_surface_temperature": mean(b["sst"]),
+            }
+
+        tides = estimate_tides(day_dt, tz_offset_hours)
+        out.append({
+            "date": day,
+            "marine": marine,
+            "solunar": {"major": majors, "minor": minors, "rating": rating,
+                        "moon": {"phase_name": mp["phase_name"], "illumination": illum}},
+            "tides": tides,
+        })
+    return out
+
+
+
 
 # ----------------------- API routes -----------------------
 @api_router.get("/")
@@ -332,7 +393,7 @@ async def weather(
         "current": "wave_height,wave_direction,wave_period,swell_wave_height,sea_surface_temperature",
         "hourly": "wave_height,wave_direction,wave_period,swell_wave_height,sea_surface_temperature",
         "timezone": "auto",
-        "forecast_days": 3,
+        "forecast_days": 7,
     }
 
     # Optional custom date range (clamped to Open-Meteo limits: ~92d past .. 16d future)
@@ -400,6 +461,7 @@ async def weather(
     result["solunar"] = solunar_periods(now, tz_offset, sunrise, sunset)
     result["tides"] = estimate_tides(now, tz_offset)
     result["fishing"] = fishing_scores(result.get("daily", {}), result.get("hourly", {}))
+    result["daily_details"] = daily_details(result.get("daily", {}), result.get("marine_hourly", {}), tz_offset)
     result["period"] = period
     return result
 
